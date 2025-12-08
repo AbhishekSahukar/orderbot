@@ -1,49 +1,52 @@
-name: Deploy to EC2
+name: Deploy OrderBot to EC2
 
 on:
   push:
     branches:
-      - main
+      - master
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Repository
+    # Checkout code
+    - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Set up SSH
+    # Prepare SSH key
+    - name: Setup SSH Key
       run: |
         mkdir -p ~/.ssh
         echo "${{ secrets.EC2_KEY }}" > ~/.ssh/ec2_key
         chmod 600 ~/.ssh/ec2_key
         ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
-    - name: Deploy to EC2
+    # Deploy
+    - name: Deploy to EC2 Instance
       run: |
         ssh -i ~/.ssh/ec2_key ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
-          cd /home/ubuntu/orderbot
 
-          echo "🔄 Pulling latest changes..."
+          echo "-------- 🔄 Pulling latest code --------"
+          cd /home/ubuntu/orderbot
           git reset --hard
           git pull origin master
 
-          echo "📦 Updating backend..."
+          echo "-------- 📦 Updating Python dependencies --------"
           source venv/bin/activate
           pip install -r requirements.txt
 
-          echo "🚀 Restarting backend service..."
+          echo "-------- 🚀 Restarting FastAPI backend --------"
           sudo systemctl restart orderbot.service
 
-          echo "🌐 Rebuilding frontend..."
+          echo "-------- 🌐 Rebuilding frontend (Vite + React) --------"
           cd frontend
           rm -rf dist
           npm install --legacy-peer-deps
           npm run build
 
-          echo "♻️ Restarting Nginx..."
+          echo "-------- ♻️ Restarting Nginx --------"
           sudo systemctl restart nginx
 
-          echo "✅ Deployment completed successfully!"
+          echo "-------- ✅ Deployment successful --------"
         EOF
