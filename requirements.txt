@@ -1,0 +1,18 @@
+# --- Backend Framework ---
+fastapi
+uvicorn
+
+# --- Database ---
+sqlalchemy
+pydantic
+python-dotenv
+
+# --- LLMs & LangChain ---
+langchain
+langchain-core
+langchain-openai
+openai
+
+# --- Utils ---
+faker           # for seeding dummy data
+requests
