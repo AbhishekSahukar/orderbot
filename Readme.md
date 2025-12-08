@@ -26,7 +26,7 @@ OrderBot helps users quickly retrieve **order details, status, customer info**, 
 - LLM parameter extraction  
 - LLM answer generation  
  
-## 🏗️ Tech Stack
+## Tech Stack
 
 ### **Frontend**
 - React (Vite)
@@ -45,13 +45,13 @@ OrderBot helps users quickly retrieve **order details, status, customer info**, 
 
 ## How to run
 ### Environment Variables
-- Create a `.env` in project root:
-- Add
-OPENROUTER_API_KEY=your_key_here
-OPENROUTER_BASE_URL=https://openrouter.ai/api/v1/chat/completions
-LLM_MODEL=deepseek/deepseek-chat
-DATABASE_URL=sqlite:///./orders.db
-- 
+Create a `.env` in project root:
+ Add
+- OPENROUTER_API_KEY=your_key_here
+- OPENROUTER_BASE_URL=https://openrouter.ai/api/v1/chat/completions
+- LLM_MODEL=deepseek/deepseek-chat
+- DATABASE_URL=sqlite:///./orders.db
+
 For frontend (`frontend/.env`):
 - Add
 VITE_API_URL=http://localhost:8000/api
