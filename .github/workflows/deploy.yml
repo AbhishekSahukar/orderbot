@@ -1,9 +1,9 @@
-name: Deploy OrderBot to EC2
+name: Deploy OrderBot to EC_2
 
 on:
   push:
     branches:
-      - master
+      - main
 
 jobs:
   deploy:
