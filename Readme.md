@@ -58,6 +58,8 @@ VITE_API_URL=http://localhost:8000/api
 
 ## 🧪 Run the Project Locally
 
+ Run seed_data.py to create order data 
+
 ### **1️⃣ Start backend**
 ```bash
 cd orderbot
