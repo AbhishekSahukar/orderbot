@@ -1,31 +1,40 @@
-# ---------- Frontend build ----------
+# -----------------------
+# Frontend build stage
+# -----------------------
 FROM node:18-alpine AS frontend-builder
-WORKDIR /frontend
 
+WORKDIR /frontend
 COPY frontend/package*.json ./
 RUN npm install
-
 COPY frontend/ .
 RUN npm run build   # produces /frontend/dist
 
-# ---------- Backend + Nginx ----------
+
+# -----------------------
+# Backend + Nginx stage
+# -----------------------
 FROM python:3.10-slim
-WORKDIR /app
 
 # Install nginx
 RUN apt-get update && apt-get install -y nginx && rm -rf /var/lib/apt/lists/*
 
-# Copy backend
-COPY backend/ ./backend
-COPY requirements.txt .
+# Set working dir
+WORKDIR /app
+
+# Copy backend (ROOT files, not backend/)
+COPY . .
+
+# Copy built frontend
+COPY --from=frontend-builder /frontend/dist ./frontend/dist
+
+# Install Python deps
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy React DIST 
-COPY --from=frontend-builder /frontend/dist /usr/share/nginx/html
+# Copy nginx config
+COPY nginx.conf /etc/nginx/nginx.conf
 
-# Nginx config
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Expose EB port
+EXPOSE 8000
 
-EXPOSE 80
-
-CMD service nginx start && uvicorn backend.api.main:app --host 0.0.0.0 --port 8000
+# Start both nginx + uvicorn
+CMD service nginx start && uvicorn api.main:app --host 0.0.0.0 --port 8000
