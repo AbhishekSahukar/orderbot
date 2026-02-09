@@ -1,3 +1,20 @@
+############################
+# Stage 1: Build React
+############################
+FROM node:18-alpine AS frontend-builder
+
+WORKDIR /frontend
+
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm install
+
+COPY frontend/ ./
+RUN npm run build
+
+
+############################
+# Stage 2: Backend runtime
+############################
 FROM python:3.10-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -8,16 +25,18 @@ WORKDIR /app
 # System dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \
-    nodejs \
-    npm \
     && rm -rf /var/lib/apt/lists/*
 
 # Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy entire project (backend + frontend build)
-COPY . .
+# Copy backend code
+COPY api ./api
+COPY common ./common
+
+# Copy React build from stage 1
+COPY --from=frontend-builder /frontend/build ./frontend/build
 
 EXPOSE 8000
 
