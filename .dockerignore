@@ -46,3 +46,10 @@ node_modules/
 # Docker
 Dockerfile
 docker-compose.yml
+
+node_modules/
+frontend/node_modules/
+.git/
+.env
+__pycache__/
+*.pyc

@@ -1,5 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+import os
+
 from common.db import Base, engine
 from common import models
 from api.routers import chat_router
@@ -12,7 +16,7 @@ app = FastAPI(title="Order Status Chatbot API")
 # ✅ Allow frontend (React) to talk to backend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -21,6 +25,21 @@ app.add_middleware(
 # Register routes
 app.include_router(chat_router.router, prefix="/api/chat", tags=["Chat"])
 
-@app.get("/")
-async def root():
-    return {"message": "Order Status Chatbot API is running 🚀"}
+# -----------------------------
+# ✅ React frontend (SAFE ADDON)
+# -----------------------------
+if os.path.exists("frontend/build"):
+    app.mount(
+        "/static",
+        StaticFiles(directory="frontend/build/static"),
+        name="static",
+    )
+
+    @app.get("/", include_in_schema=False)
+    async def serve_react():
+        return FileResponse("frontend/build/index.html")
+else:
+    # 🔒 Original behavior preserved
+    @app.get("/")
+    async def root():
+        return {"message": "Order Status Chatbot API is running 🚀"}
