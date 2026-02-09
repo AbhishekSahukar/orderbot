@@ -1,6 +1,6 @@
-# ===============================
-# Stage 1 – Build React frontend
-# ===============================
+# =========================
+# Frontend build stage
+# =========================
 FROM node:18-alpine AS frontend-builder
 
 WORKDIR /frontend
@@ -8,31 +8,34 @@ WORKDIR /frontend
 COPY frontend/package*.json ./
 RUN npm install
 
-COPY frontend .
+COPY frontend/ .
 RUN npm run build
 
 
-# ===============================
-# Stage 2 – Backend + React build
-# ===============================
+# =========================
+# Backend + Nginx stage
+# =========================
 FROM python:3.10-slim
 
 WORKDIR /app
 
-# Install system deps
-RUN apt-get update && apt-get install -y build-essential && rm -rf /var/lib/apt/lists/*
+# Install nginx
+RUN apt-get update \
+    && apt-get install -y nginx \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install Python deps
+# Copy backend
+COPY backend/ ./backend
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy backend code
-COPY api ./api
-COPY common ./common
+# Copy Vite build output
+RUN mkdir -p /usr/share/nginx/html
+COPY --from=frontend-builder /frontend/dist /usr/share/nginx/html
 
-# Copy React build output
-COPY --from=frontend-builder /frontend/build ./frontend/build
+# Copy nginx config
+COPY nginx.conf /etc/nginx/nginx.conf
 
-EXPOSE 8000
+EXPOSE 80
 
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "nginx && uvicorn backend.api.main:app --host 0.0.0.0 --port 8000"]
