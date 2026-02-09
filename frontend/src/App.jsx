@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import "./index.css";
 
-const API_BASE = import.meta.env.VITE_API_URL;
+const API_BASE = import.meta.env.VITE_API_URL || "";
+
 
 function App() {
   const [messages, setMessages] = useState([
@@ -36,7 +37,7 @@ function App() {
     setIsThinking(true);
 
     try {
-      const response = await axios.post(`${API_BASE}/chat/query`, {
+      const response = await axios.post(`${API_BASE}/api/chat/query`, {
         query: input,
       });
 
