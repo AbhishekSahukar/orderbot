@@ -30,16 +30,16 @@ app.include_router(chat_router.router, prefix="/api/chat", tags=["Chat"])
 # -----------------------------
 if os.path.exists("frontend/dist"):
     app.mount(
-        "/static",
+        "/assets",
         StaticFiles(directory="frontend/dist/assets"),
-        name="static",
+        name="assets",
     )
 
     @app.get("/", include_in_schema=False)
     async def serve_react():
         return FileResponse("frontend/dist/index.html")
 else:
-    # 🔒 Original behavior preserved
+   
     @app.get("/")
     async def root():
         return {"message": "Order Status Chatbot API is running 🚀"}
