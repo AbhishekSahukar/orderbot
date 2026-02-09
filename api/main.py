@@ -28,16 +28,16 @@ app.include_router(chat_router.router, prefix="/api/chat", tags=["Chat"])
 # -----------------------------
 # ✅ React frontend (SAFE ADDON)
 # -----------------------------
-if os.path.exists("frontend/build"):
+if os.path.exists("frontend/dist"):
     app.mount(
         "/static",
-        StaticFiles(directory="frontend/build/static"),
+        StaticFiles(directory="frontend/dist/assets"),
         name="static",
     )
 
     @app.get("/", include_in_schema=False)
     async def serve_react():
-        return FileResponse("frontend/build/index.html")
+        return FileResponse("frontend/dist/index.html")
 else:
     # 🔒 Original behavior preserved
     @app.get("/")
