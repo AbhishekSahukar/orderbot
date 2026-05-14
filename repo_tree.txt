@@ -1,0 +1,52 @@
+D:/Docs/Jobs/Projects/Updated Projects/orderbot
+├── api
+│   ├── routers
+│   │   └── chat_router.py
+│   ├── __init__.py
+│   └── main.py
+├── assets
+│   ├── screenshot-chat.png
+│   └── screenshot-response.png
+├── common
+│   ├── __init__.py
+│   ├── db.py
+│   ├── llm.py
+│   ├── models.py
+│   ├── query_service.py
+│   ├── schema_utils.py
+│   ├── schemas.py
+│   └── utils.py
+├── frontend
+│   ├── public
+│   │   └── vite.svg
+│   ├── src
+│   │   ├── assets
+│   │   │   └── react.svg
+│   │   ├── components
+│   │   │   ├── ChatBubble.jsx
+│   │   │   └── ChatInput.jsx
+│   │   ├── pages
+│   │   │   └── ChatPage.jsx
+│   │   ├── App.jsx
+│   │   ├── index.css
+│   │   └── main.jsx
+│   ├── .env.example
+│   ├── .gitignore
+│   ├── eslint.config.js
+│   ├── index.html
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── README.md
+│   └── vite.config.js
+├── tests
+│   ├── __init__.py
+│   └── test_chat.py
+├── .gitignore
+├── orders.db
+├── Readme.md
+├── repo_part1.txt
+├── repo_part2.txt
+├── repo_part3.txt
+├── repo_part4.txt
+├── requirements.txt
+└── seed_data.py

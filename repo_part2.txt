@@ -1,0 +1,241 @@
+================================================================================
+FILE: D:/Docs/Jobs/Projects/Updated Projects/orderbot\common\llm.py
+================================================================================
+import os
+import json
+import requests
+from dotenv import load_dotenv
+
+# 🔹 Load environment variables
+load_dotenv()
+
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+OPENROUTER_BASE_URL = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1/chat/completions")
+LLM_MODEL = os.getenv("LLM_MODEL", "deepseek/deepseek-chat")
+
+if not OPENROUTER_API_KEY:
+    raise RuntimeError("❌ Missing OPENROUTER_API_KEY in environment")
+
+# 🔹 Low-level call to OpenRouter
+def _call_llm(messages):
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json",
+    }
+    payload = {"model": LLM_MODEL, "messages": messages}
+    response = requests.post(OPENROUTER_BASE_URL, headers=headers, data=json.dumps(payload))
+    response.raise_for_status()
+    return response.json()["choices"][0]["message"]["content"]
+
+# 🔹 Extract structured filters
+def extract_parameters_llm(user_query: str, schema: dict):
+    prompt = [
+        {"role": "system", "content": "Extract filters from the user query that match schema. Output JSON only."},
+        {"role": "user", "content": f"Query: {user_query}\nSchema: {schema}"}
+    ]
+    raw = _call_llm(prompt)
+    try:
+        return json.loads(raw)
+    except:
+        return {"filters": {}}
+
+# 🔹 Generate response (DB → NL, no hardcoding)
+def generate_response(user_query: str, orders: list):
+    if not orders:
+        return "I couldn’t find any orders matching your request."
+
+    # ✅ Always build from DB values
+    structured_info = [
+        {
+            "order_id": o.id,
+            "customer": o.customer.name,
+            "product": o.product,
+            "status": o.status
+        }
+        for o in orders
+    ]
+
+    prompt = [
+        {"role": "system", "content": (
+            "You are an assistant answering customer order queries. "
+            "Use only the database results provided. "
+            "Always respond in short, natural conversational English. "
+            "If one order matches, state it clearly. "
+            "If multiple orders match, summarize them naturally. "
+            "⚠️ Do not hallucinate names or products — only use DB values."
+        )},
+        {"role": "user", "content": f"User query: {user_query}\nDatabase results: {json.dumps(structured_info, indent=2)}"}
+    ]
+
+    return _call_llm(prompt).strip()
+
+
+
+================================================================================
+FILE: D:/Docs/Jobs/Projects/Updated Projects/orderbot\common\models.py
+================================================================================
+from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy.orm import relationship
+from common.db import Base
+
+class Customer(Base):
+    __tablename__ = "customers"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True)
+    orders = relationship("Order", back_populates="customer")
+
+class Order(Base):
+    __tablename__ = "orders"
+    id = Column(Integer, primary_key=True, index=True)
+    product = Column(String, index=True)
+    status = Column(String, index=True)
+    customer_id = Column(Integer, ForeignKey("customers.id"))
+    customer = relationship("Customer", back_populates="orders")
+
+class StatusMapping(Base):
+    __tablename__ = "status_mapping"
+    id = Column(Integer, primary_key=True, index=True)
+    code = Column(String, unique=True, index=True)     # e.g. "PENDING"
+    description = Column(String)                       # e.g. "Order placed, waiting to be processed"
+
+
+
+================================================================================
+FILE: D:/Docs/Jobs/Projects/Updated Projects/orderbot\common\query_service.py
+================================================================================
+from sqlalchemy.orm import Session
+from common import models
+
+def query_orders(filters: dict, db: Session):
+    query = db.query(models.Order).join(models.Customer)
+
+    if "customer" in filters:
+        # ✅ Case-insensitive, partial matching (dynamic)
+        query = query.filter(models.Customer.name.ilike(f"%{filters['customer']}%"))
+
+    if "product" in filters:
+        query = query.filter(models.Order.product.ilike(f"%{filters['product']}%"))
+
+    if "status" in filters:
+        query = query.filter(models.Order.status.ilike(f"%{filters['status']}%"))
+
+    return query.all()
+
+
+
+================================================================================
+FILE: D:/Docs/Jobs/Projects/Updated Projects/orderbot\common\schema_utils.py
+================================================================================
+from common import models
+
+def get_schema_info():
+    """
+    Extract schema info dynamically from SQLAlchemy models.
+    Returns dictionary of table -> list of columns.
+    """
+    return {
+        "Customer": [c.name for c in models.Customer.__table__.columns],
+        "Order": [c.name for c in models.Order.__table__.columns],
+        "StatusMapping": [c.name for c in models.StatusMapping.__table__.columns],
+    }
+
+
+
+================================================================================
+FILE: D:/Docs/Jobs/Projects/Updated Projects/orderbot\common\schemas.py
+================================================================================
+from pydantic import BaseModel
+from typing import List, Optional
+
+class OrderBase(BaseModel):
+    product: str
+    status: str
+
+class OrderResponse(OrderBase):
+    id: int
+    customer_id: int
+
+    class Config:
+        orm_mode = True
+
+class CustomerBase(BaseModel):
+    name: str
+
+class CustomerResponse(CustomerBase):
+    id: int
+    orders: List[OrderResponse] = []
+
+    class Config:
+        orm_mode = True
+
+
+
+================================================================================
+FILE: D:/Docs/Jobs/Projects/Updated Projects/orderbot\common\utils.py
+================================================================================
+from sqlalchemy import inspect
+from common.db import engine
+
+def get_schema_info():
+    inspector = inspect(engine)
+    schema = {}
+    for table_name in inspector.get_table_names():
+        columns = [col["name"] for col in inspector.get_columns(table_name)]
+        schema[table_name] = columns
+    return schema
+
+
+
+================================================================================
+FILE: D:/Docs/Jobs/Projects/Updated Projects/orderbot\frontend\README.md
+================================================================================
+# React + Vite
+
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+
+Currently, two official plugins are available:
+
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+
+## Expanding the ESLint configuration
+
+If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+
+
+
+================================================================================
+FILE: D:/Docs/Jobs/Projects/Updated Projects/orderbot\frontend\eslint.config.js
+================================================================================
+import js from '@eslint/js'
+import globals from 'globals'
+import reactHooks from 'eslint-plugin-react-hooks'
+import reactRefresh from 'eslint-plugin-react-refresh'
+import { defineConfig, globalIgnores } from 'eslint/config'
+
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{js,jsx}'],
+    extends: [
+      js.configs.recommended,
+      reactHooks.configs['recommended-latest'],
+      reactRefresh.configs.vite,
+    ],
+    languageOptions: {
+      ecmaVersion: 2020,
+      globals: globals.browser,
+      parserOptions: {
+        ecmaVersion: 'latest',
+        ecmaFeatures: { jsx: true },
+        sourceType: 'module',
+      },
+    },
+    rules: {
+      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+    },
+  },
+])
+
+
+

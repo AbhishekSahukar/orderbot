@@ -1,0 +1,279 @@
+================================================================================
+FILE: D:/Docs/Jobs/Projects/Updated Projects/orderbot\Readme.md
+================================================================================
+#  OrderBot – AI-Powered Order Tracking Assistant  
+A full-stack AI assistant built using **FastAPI**, **React (Vite)** and **OpenRouter LLMs**.  
+OrderBot helps users quickly retrieve **order details, status, customer info**, and more using natural language.
+
+
+##  Features
+
+### AI Capabilities
+- Understands natural language queries  
+- Extracts order parameters (order ID, customer name, date, etc.)  
+- Responds with meaningful, context-aware answers  
+- Uses **DeepSeek Chat** via OpenRouter API  
+
+###  Order Data Handling
+- Stores & retrieves order data from SQLite (`orders.db`)  
+- Structured query logic using FastAPI  
+- Flexible schema for demo datasets  
+
+###  Frontend (React + Vite)
+- Clean ChatGPT-like UI  
+- Responsive design  
+- Typing animation (“OrderBot is thinking…”)  
+- API_ENV variables supported  
+
+### Backend (FastAPI) 
+- LLM parameter extraction  
+- LLM answer generation  
+ 
+## Tech Stack
+
+### **Frontend**
+- React (Vite)
+- Axios
+- CSS Responsive UI
+
+### **Backend**
+- FastAPI
+- Uvicorn
+- SQLAlchemy (optional)
+- SQLite database
+
+### **AI**
+- OpenRouter API  
+- DeepSeek 
+
+## How to run
+### Environment Variables
+Create a `.env` in project root:
+ Add
+- OPENROUTER_API_KEY=your_key_here
+- OPENROUTER_BASE_URL=https://openrouter.ai/api/v1/chat/completions
+- LLM_MODEL=deepseek/deepseek-chat
+- DATABASE_URL=sqlite:///./orders.db
+
+For frontend (`frontend/.env`):
+- Add
+VITE_API_URL=http://localhost:8000/api
+
+## 🧪 Run the Project Locally
+
+ Run seed_data.py to create order data 
+
+### **1️⃣ Start backend**
+```bash
+cd orderbot
+uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+### **2️⃣ Start frontend**
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+## Screenshots
+### 1. Chat UI
+
+![Chat UI](assets/screenshot-chat.png)
+
+### 2. Bot test chat
+
+![OrderBot Response](assets/screenshot-response.png)
+
+## Author
+- Abhishek Sahukar Srinivas
+
+## License 
+- MIT License
+
+
+================================================================================
+FILE: D:/Docs/Jobs/Projects/Updated Projects/orderbot\requirements.txt
+================================================================================
+# --- Backend Framework ---
+fastapi
+uvicorn
+
+# --- Database ---
+sqlalchemy
+pydantic
+python-dotenv
+
+# --- LLMs & LangChain ---
+langchain
+langchain-core
+langchain-openai
+openai
+
+# --- Utils ---
+faker           # for seeding dummy data
+requests
+
+
+
+================================================================================
+FILE: D:/Docs/Jobs/Projects/Updated Projects/orderbot\seed_data.py
+================================================================================
+from faker import Faker
+from common import models, db
+
+fake = Faker()
+
+# Status codes
+statuses = [
+    ("PENDING", "Order placed, waiting to be processed"),
+    ("PROCESSING", "Order is being prepared"),
+    ("SHIPPED", "Order has been shipped"),
+    ("DELIVERED", "Order delivered to customer"),
+    ("CANCELLED", "Order cancelled by customer"),
+    ("RETURNED", "Order returned"),
+    ("ON_HOLD", "Order is on hold"),
+    ("FAILED", "Payment failed"),
+    ("REFUNDED", "Refund processed"),
+    ("COMPLETED", "Order successfully completed")
+]
+
+with db.SessionLocal() as session:
+    # 1. Insert StatusMapping
+    for code, desc in statuses:
+        session.add(models.StatusMapping(code=code, description=desc))
+    session.commit()
+
+    # 2. Insert ~149 random customers + orders
+    for _ in range(149):
+        customer = models.Customer(name=fake.name())
+        session.add(customer)
+        session.flush()  # so we can use customer.id
+
+        for _ in range(fake.random_int(min=1, max=3)):
+            order = models.Order(
+                product=fake.word().capitalize(),
+                status=fake.random_element([s[0] for s in statuses]),
+                customer_id=customer.id
+            )
+            session.add(order)
+
+    # 3. Add guaranteed demo customer Bob Smith
+    bob = models.Customer(name="Bob Smith")
+    session.add(bob)
+    session.flush()
+
+    session.add_all([
+        models.Order(product="Phone", status="PENDING", customer_id=bob.id),
+        models.Order(product="Laptop", status="SHIPPED", customer_id=bob.id),
+    ])
+
+    session.commit()
+    session.close()
+
+print("✅ Database seeded with statuses, customers, orders, and demo Bob Smith.")
+
+
+
+================================================================================
+FILE: D:/Docs/Jobs/Projects/Updated Projects/orderbot\api\__init__.py
+================================================================================
+
+
+
+================================================================================
+FILE: D:/Docs/Jobs/Projects/Updated Projects/orderbot\api\main.py
+================================================================================
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from common.db import Base, engine
+from common import models
+from api.routers import chat_router
+
+# Create DB tables
+Base.metadata.create_all(bind=engine)
+
+app = FastAPI(title="Order Status Chatbot API")
+
+# ✅ Allow frontend (React) to talk to backend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Register routes
+app.include_router(chat_router.router, prefix="/api/chat", tags=["Chat"])
+
+@app.get("/")
+async def root():
+    return {"message": "Order Status Chatbot API is running 🚀"}
+
+
+
+================================================================================
+FILE: D:/Docs/Jobs/Projects/Updated Projects/orderbot\api\routers\chat_router.py
+================================================================================
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from pydantic import BaseModel
+from common.db import get_db
+from common.llm import extract_parameters_llm, generate_response
+from common.query_service import query_orders
+from common.schema_utils import get_schema_info
+
+router = APIRouter()
+
+class ChatRequest(BaseModel):
+    query: str
+
+@router.post("/query")
+def chat(request: ChatRequest, db: Session = Depends(get_db)):
+    try:
+        schema = get_schema_info()
+        params = extract_parameters_llm(request.query, schema)
+        results = query_orders(params.get("filters", {}), db)
+        answer = generate_response(request.query, results)
+        return {"answer": answer}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+================================================================================
+FILE: D:/Docs/Jobs/Projects/Updated Projects/orderbot\common\__init__.py
+================================================================================
+
+
+
+================================================================================
+FILE: D:/Docs/Jobs/Projects/Updated Projects/orderbot\common\db.py
+================================================================================
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./orders.db")
+
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+Base = declarative_base()
+
+# Dependency for FastAPI routes
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+

@@ -2,9 +2,8 @@ import React, { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import "./index.css";
 
-// In production the frontend is served by the same server, so we use a
-// relative path. Override with VITE_API_URL for local development.
-const API_BASE = import.meta.env.VITE_API_URL || "/api";
+const API_BASE = import.meta.env.VITE_API_URL || "";
+
 
 export default function App() {
   const [messages, setMessages] = useState([
@@ -32,8 +31,8 @@ export default function App() {
     setIsThinking(true);
 
     try {
-      const { data } = await axios.post(`${API_BASE}/chat/query`, {
-        query: trimmed,
+      const response = await axios.post(`${API_BASE}/api/chat/query`, {
+        query: input,
       });
       setMessages([...updated, { sender: "assistant", text: data.answer || "No response." }]);
     } catch {

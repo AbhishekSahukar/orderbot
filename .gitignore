@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 venv/
 .env
+.venv
 
 # Node
 node_modules/
@@ -19,6 +20,7 @@ backend/.env
 Thumbs.db
 
 # Unwanted
+split.py
 repo_part1.txt
 repo_part2.txt
 repo_part3.txt

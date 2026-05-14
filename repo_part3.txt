@@ -1,0 +1,351 @@
+================================================================================
+FILE: D:/Docs/Jobs/Projects/Updated Projects/orderbot\frontend\index.html
+================================================================================
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vite + React</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
+
+
+
+================================================================================
+FILE: D:/Docs/Jobs/Projects/Updated Projects/orderbot\frontend\package.json
+================================================================================
+{
+  "name": "frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "axios": "^1.12.2",
+    "framer-motion": "^12.23.16",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.35.0",
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.9",
+    "@vitejs/plugin-react": "^5.0.2",
+    "eslint": "^9.35.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.20",
+    "globals": "^16.4.0",
+    "vite": "^7.1.6"
+  }
+}
+
+
+
+================================================================================
+FILE: D:/Docs/Jobs/Projects/Updated Projects/orderbot\frontend\vite.config.js
+================================================================================
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [react()],
+})
+
+
+
+================================================================================
+FILE: D:/Docs/Jobs/Projects/Updated Projects/orderbot\frontend\src\App.jsx
+================================================================================
+import React, { useState, useRef, useEffect } from "react";
+import axios from "axios";
+import "./index.css";
+
+const API_BASE = import.meta.env.VITE_API_URL;
+
+function App() {
+  const [messages, setMessages] = useState([
+    {
+      sender: "assistant",
+      text: "👋 Hello! I'm OrderBot. I can help you check order statuses, customer orders, and delivery updates."
+    }
+  ]);
+
+  const [input, setInput] = useState("");
+  const [isThinking, setIsThinking] = useState(false);
+  const chatEndRef = useRef(null);
+
+  // Auto-scroll
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isThinking]);
+
+  const sendMessage = async (e) => {
+    e.preventDefault();
+    if (!input.trim()) return;
+
+    const newMessages = [
+      ...messages,
+      { sender: "user", text: input }
+    ];
+    setMessages(newMessages);
+    setInput("");
+
+    // SHOW thinking indicator
+    setIsThinking(true);
+
+    try {
+      const response = await axios.post(`${API_BASE}/chat/query`, {
+        query: input,
+      });
+
+      const answer = response.data.answer || "No response.";
+
+      setMessages([
+        ...newMessages,
+        { sender: "assistant", text: answer }
+      ]);
+    } catch (error) {
+      console.error("Backend error:", error);
+      setMessages([
+        ...newMessages,
+        { sender: "assistant", text: "⚠️ Error connecting to backend." }
+      ]);
+    }
+
+    // HIDE thinking indicator
+    setIsThinking(false);
+  };
+
+  return (
+    <div className="app-container">
+      <div className="chat-container">
+        <h2 className="chat-title">OrderBot Assistant</h2>
+
+        <div className="chat-box">
+          {messages.map((msg, idx) => (
+            <div
+              key={idx}
+              className={`chat-message ${msg.sender === "user" ? "user" : "assistant"}`}
+            >
+              {msg.text}
+            </div>
+          ))}
+
+          {/* Typing indicator */}
+          {isThinking && (
+            <div className="chat-message assistant typing">
+              OrderBot is thinking…
+            </div>
+          )}
+
+          <div ref={chatEndRef} />
+        </div>
+
+        <form onSubmit={sendMessage} className="input-container">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Type your message..."
+          />
+          <button type="submit">Send</button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+export default App;
+
+
+
+================================================================================
+FILE: D:/Docs/Jobs/Projects/Updated Projects/orderbot\frontend\src\index.css
+================================================================================
+/* GLOBAL */
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #1a1b26;
+  font-family: "Inter", sans-serif;
+  min-height: 100vh;
+}
+
+/* MAIN WRAPPER */
+.app-container {
+  width: 100%;
+  height: 100vh;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+/* CHAT CONTAINER — Now works properly */
+.chat-container {
+  width: 100%;
+  max-width: 780px;       
+  height: 90vh;
+  margin: 0 auto;          /* center horizontally */
+  background: #242637;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+}
+
+
+
+/* TITLE */
+.chat-title {
+  text-align: center;
+  padding: 16px;
+  font-size: 18px;
+  color: white;
+  font-weight: 600;
+  border-bottom: 1px solid #333;
+}
+
+/* CHAT BOX */
+.chat-box {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #1f2030;
+}
+
+/* MESSAGE BUBBLES */
+.chat-message {
+  max-width: 85%;
+  padding: 12px 16px;
+  border-radius: 14px;
+  font-size: 15px;
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+.chat-message.user {
+  align-self: flex-end;
+  background: #3a3f51;
+  color: #f5f5f5;
+  border-radius: 14px 14px 4px 14px;
+}
+
+.chat-message.assistant {
+  align-self: flex-start;
+  background: #5a67d8;
+  color: white;
+  border-radius: 14px 14px 14px 4px;
+}
+
+/* INPUT BAR */
+.input-container {
+  display: flex;
+  padding: 12px;
+  border-top: 1px solid #333;
+  background: #1f2030;
+  gap: 10px;
+}
+
+/* INPUT */
+.input-container input {
+  flex: 1;
+  padding: 12px;
+  background: #2a2c3e;
+  border-radius: 8px;
+  border: none;
+  outline: none;
+  color: white;
+}
+
+/* BUTTON */
+.input-container button {
+  padding: 12px 18px;
+  background: #5a67d8;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.input-container button:hover {
+  background: #434aa1;
+}
+
+/* ======================================
+   RESPONSIVE BREAKPOINTS
+====================================== */
+
+@media (max-width: 768px) {
+  .chat-container {
+    max-width: 100%;
+    height: 95vh;
+  }
+}
+
+@media (max-width: 480px) {
+  .chat-container {
+    height: 100vh;
+    border-radius: 0;
+  }
+
+  .chat-title {
+    font-size: 16px;
+  }
+
+  .chat-message {
+    max-width: 95%;
+    font-size: 14px;
+  }
+}
+/* Typing indicator style */
+.chat-message.typing {
+  font-style: italic;
+  opacity: 0.7;
+}
+
+.chat-message.typing::after {
+  content: " .";
+  animation: dots 1.2s infinite;
+}
+
+@keyframes dots {
+  0% { content: " ."; }
+  33% { content: " .."; }
+  66% { content: " ..."; }
+  100% { content: " ."; }
+}
+
+
+
+================================================================================
+FILE: D:/Docs/Jobs/Projects/Updated Projects/orderbot\frontend\src\main.jsx
+================================================================================
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App.jsx";
+import "./index.css";   // ✅ global styles here
+
+ReactDOM.createRoot(document.getElementById("root")).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+
+
+

@@ -1,18 +1,58 @@
+# Python cache
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-.Python
-.env
-*.db
-.git
+
+# Virtual environments
+venv/
+.env/
+.env.*
+
+# Git
+.git/
 .gitignore
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test & coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs
+*.log
+
+# Build / temp
+build/
+dist/
+*.egg-info/
+
+# Node (if any)
 node_modules/
-frontend/dist/
-frontend/.env
-tests/
-*.md
-assets/
+
+# Elastic Beanstalk local files
+.elasticbeanstalk/*
+!.elasticbeanstalk/config.yml
+
+# Docker
+Dockerfile
+docker-compose.yml
+
+node_modules/
+frontend/node_modules/
+.git/
+.env
+__pycache__/
+*.pyc
 
 repo_part1.txt
 repo_part2.txt

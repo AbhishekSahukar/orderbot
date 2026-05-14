@@ -1,38 +1,40 @@
-# ── Stage 1: build the React frontend ─────────────────────────────────────────
-FROM node:20-alpine AS frontend-builder
+# -----------------------
+# Frontend build stage
+# -----------------------
+FROM node:18-alpine AS frontend-builder
 
-WORKDIR /app/frontend
-
+WORKDIR /frontend
 COPY frontend/package*.json ./
-RUN npm ci
+RUN npm install
+COPY frontend/ .
+RUN npm run build   # produces /frontend/dist
 
-COPY frontend/ ./
-RUN npm run build
 
+# -----------------------
+# Backend + Nginx stage
+# -----------------------
+FROM python:3.10-slim
 
-# ── Stage 2: Python backend + serve built frontend ─────────────────────────────
-FROM python:3.11-slim
+# Install nginx
+RUN apt-get update && apt-get install -y nginx && rm -rf /var/lib/apt/lists/*
 
+# Set working dir
 WORKDIR /app
 
-# System deps
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    && rm -rf /var/lib/apt/lists/*
+# Copy backend (ROOT files, not backend/)
+COPY . .
 
-# Python deps
-COPY requirements.txt ./
+# Copy built frontend
+COPY --from=frontend-builder /frontend/dist ./frontend/dist
+
+# Install Python deps
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Backend source
-COPY api/      ./api/
-COPY common/   ./common/
-COPY seed_data.py ./
+# Copy nginx config
+COPY nginx.conf /etc/nginx/nginx.conf
 
-# React build output from stage 1
-COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
-
+# Expose EB port
 EXPOSE 8000
 
-# Seed DB on first run (idempotent), then start the server
-CMD ["sh", "-c", "python seed_data.py && uvicorn api.main:app --host 0.0.0.0 --port 8000"]
+# Start both nginx + uvicorn
+CMD service nginx start && uvicorn api.main:app --host 0.0.0.0 --port 8000
