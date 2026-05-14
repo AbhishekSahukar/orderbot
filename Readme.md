@@ -9,7 +9,7 @@ OrderBot helps users quickly retrieve **order details, status, customer info**, 
 - Understands natural language queries  
 - Extracts order parameters (order ID, customer name, date, etc.)  
 - Responds with meaningful, context-aware answers  
-- Uses **DeepSeek Chat** via OpenRouter API  
+- Uses **minimax/minimax-m2.5** via OpenRouter API  
 
 ###  Order Data Handling
 - Stores & retrieves order data from SQLite (`orders.db`)  
@@ -41,7 +41,7 @@ OrderBot helps users quickly retrieve **order details, status, customer info**, 
 
 ### **AI**
 - OpenRouter API  
-- DeepSeek 
+- minimax/minimax-m2.5
 
 ## How to run
 ### Environment Variables
@@ -49,7 +49,7 @@ Create a `.env` in project root:
  Add
 - OPENROUTER_API_KEY=your_key_here
 - OPENROUTER_BASE_URL=https://openrouter.ai/api/v1/chat/completions
-- LLM_MODEL=deepseek/deepseek-chat
+- LLM_MODEL=minimax/minimax-m2.5
 - DATABASE_URL=sqlite:///./orders.db
 
 For frontend (`frontend/.env`):

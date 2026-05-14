@@ -1,18 +1,14 @@
-# --- Backend Framework ---
+# Web framework
 fastapi
-uvicorn
+uvicorn[standard]
 
-# --- Database ---
+# Database
 sqlalchemy
 pydantic
 python-dotenv
 
-# --- LLMs & LangChain ---
-langchain
-langchain-core
-langchain-openai
-openai
-
-# --- Utils ---
-faker           # for seeding dummy data
+# HTTP client (for OpenRouter calls)
 requests
+
+# Dev / seeding
+faker

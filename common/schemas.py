@@ -1,23 +1,18 @@
 from pydantic import BaseModel
-from typing import List, Optional
 
-class OrderBase(BaseModel):
+
+class OrderResponse(BaseModel):
+    id: int
     product: str
     status: str
-
-class OrderResponse(OrderBase):
-    id: int
     customer_id: int
 
-    class Config:
-        orm_mode = True
+    model_config = {"from_attributes": True}
 
-class CustomerBase(BaseModel):
-    name: str
 
-class CustomerResponse(CustomerBase):
+class CustomerResponse(BaseModel):
     id: int
-    orders: List[OrderResponse] = []
+    name: str
+    orders: list[OrderResponse] = []
 
-    class Config:
-        orm_mode = True
+    model_config = {"from_attributes": True}
