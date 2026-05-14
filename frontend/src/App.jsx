@@ -2,60 +2,48 @@ import React, { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import "./index.css";
 
-const API_BASE = import.meta.env.VITE_API_URL;
+// In production the frontend is served by the same server, so we use a
+// relative path. Override with VITE_API_URL for local development.
+const API_BASE = import.meta.env.VITE_API_URL || "/api";
 
-function App() {
+export default function App() {
   const [messages, setMessages] = useState([
     {
       sender: "assistant",
-      text: "👋 Hello! I'm OrderBot. I can help you check order statuses, customer orders, and delivery updates."
-    }
+      text: "👋 Hi! I'm OrderBot. Ask me about any order — by customer name, product, or status.",
+    },
   ]);
-
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
   const chatEndRef = useRef(null);
 
-  // Auto-scroll
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isThinking]);
 
   const sendMessage = async (e) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    const trimmed = input.trim();
+    if (!trimmed) return;
 
-    const newMessages = [
-      ...messages,
-      { sender: "user", text: input }
-    ];
-    setMessages(newMessages);
+    const updated = [...messages, { sender: "user", text: trimmed }];
+    setMessages(updated);
     setInput("");
-
-    // SHOW thinking indicator
     setIsThinking(true);
 
     try {
-      const response = await axios.post(`${API_BASE}/chat/query`, {
-        query: input,
+      const { data } = await axios.post(`${API_BASE}/chat/query`, {
+        query: trimmed,
       });
-
-      const answer = response.data.answer || "No response.";
-
+      setMessages([...updated, { sender: "assistant", text: data.answer || "No response." }]);
+    } catch {
       setMessages([
-        ...newMessages,
-        { sender: "assistant", text: answer }
+        ...updated,
+        { sender: "assistant", text: "⚠️ Could not reach the server. Please try again." },
       ]);
-    } catch (error) {
-      console.error("Backend error:", error);
-      setMessages([
-        ...newMessages,
-        { sender: "assistant", text: "⚠️ Error connecting to backend." }
-      ]);
+    } finally {
+      setIsThinking(false);
     }
-
-    // HIDE thinking indicator
-    setIsThinking(false);
   };
 
   return (
@@ -65,18 +53,14 @@ function App() {
 
         <div className="chat-box">
           {messages.map((msg, idx) => (
-            <div
-              key={idx}
-              className={`chat-message ${msg.sender === "user" ? "user" : "assistant"}`}
-            >
+            <div key={idx} className={`chat-message ${msg.sender}`}>
               {msg.text}
             </div>
           ))}
 
-          {/* Typing indicator */}
           {isThinking && (
             <div className="chat-message assistant typing">
-              OrderBot is thinking…
+              OrderBot is thinking
             </div>
           )}
 
@@ -88,13 +72,14 @@ function App() {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Type your message..."
+            placeholder="Ask about an order..."
+            disabled={isThinking}
           />
-          <button type="submit">Send</button>
+          <button type="submit" disabled={isThinking}>
+            Send
+          </button>
         </form>
       </div>
     </div>
   );
 }
-
-export default App;

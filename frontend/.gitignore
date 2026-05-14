@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+repo_part1.txt
+repo_part2.txt
+repo_part3.txt
+repo_part4.txt
+repo_tree.txt
+
+venv / .venv / .env
