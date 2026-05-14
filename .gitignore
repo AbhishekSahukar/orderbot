@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 venv/
 .env
+.venv
 
 # Node
 node_modules/
@@ -20,10 +21,11 @@ Thumbs.db
 
 # Unwanted
 split.py
-repo1.txt
-repo2.txt
-repo3.txt
-repo4.txt
+repo_part1.txt
+repo_part2.txt
+repo_part3.txt
+repo_part4.txt
+repo_tree.txt
 
 seed_data.py
 
